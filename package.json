@@ -1,0 +1,14 @@
+{
+  "name": "blueprint",
+  "version": "1.0.0",
+  "main": "electron/main.js",
+  "scripts": {
+    "start-django": "python manage.py runserver",
+    "electron:dev": "concurrently \"npm run start-django\" \"wait-on http://127.0.0.1:8000 && electron .\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0",
+    "electron": "^31.0.0",
+    "wait-on": "^8.0.0"
+  }
+}

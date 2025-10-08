@@ -1,0 +1,341 @@
+{% extends "base.html" %}
+
+{% block title %}Generate | Blueprint{% endblock %}
+
+{% block content %}
+<style>
+  /* Preview Modal Styling */
+#previewModal .modal-content {
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    padding: 0;
+    border: none;
+    overflow: hidden;
+    font-family: 'Inter', sans-serif;
+}
+
+#previewModal .modal-header {
+    background-color: #f8f9fa;
+    border-bottom: none;
+    padding: 1.25rem 1.5rem;
+}
+
+#previewModal .modal-title {
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: #212529;
+}
+
+#previewModal .btn-close {
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+}
+
+#previewModal .modal-body {
+    padding: 1.5rem;
+    background-color: #fff;
+    color: #495057;
+}
+
+#previewModal h3#modalTitle {
+    color: #0d6efd; /* subtle accent color for project title */
+}
+
+#previewModal p {
+    line-height: 1.6;
+    font-size: 0.95rem;
+}
+
+#previewModal h5 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #212529;
+}
+
+#previewModal .modal-footer {
+    padding: 1rem 1.5rem;
+    background-color: #f8f9fa;
+    border-top: none;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+#previewModal .generate-btn-modal {
+    background-color: #0d6efd;
+    border: none;
+    color: #fff;
+    font-weight: 600;
+    padding: 0.5rem 1.2rem;
+    border-radius: 8px;
+    transition: background 0.3s;
+}
+
+#previewModal .generate-btn-modal:hover {
+    background-color: #0b5ed7;
+}
+
+#previewModal .alert {
+    background-color: #e7f1ff;
+    color: #0d6efd;
+    font-weight: 500;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+}
+
+#previewModal .fw-semibold {
+    font-weight: 500;
+}
+
+#previewModal .fw-bold {
+    font-weight: 700;
+}
+
+/* Scrollable Steps */
+#modalSteps {
+    border-left: 3px solid #0d6efd;
+    padding-left: 0.75rem;
+    max-height: 300px;
+    overflow-y: auto;
+    background-color: #f9f9f9;
+    border-radius: 6px;
+}
+
+/* Hide scrollbars lightly for modern look */
+#modalSteps::-webkit-scrollbar {
+    width: 6px;
+}
+#modalSteps::-webkit-scrollbar-thumb {
+    background-color: rgba(13, 110, 253, 0.4);
+    border-radius: 3px;
+}
+#modalSteps::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* Toast Styles */
+.toast-notification {
+    min-width: 280px;
+    max-width: 350px;
+    background-color: #0d6efd;
+    color: #fff;
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    font-weight: 500;
+    opacity: 0;
+    transform: translateY(-20px);
+    transition: all 0.4s ease-in-out;
+}
+
+/* Toast visible state */
+.toast-notification.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+</style>
+
+<!-- Toast Container -->
+<div id="toastContainer" style="
+    position: fixed;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+"></div>
+
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="fw-bold">Generate New Project</h4>
+  <p class="text-muted small mb-0">Choose a starter template and get started instantly.</p>
+</div>
+
+{% comment %} Loop through all categories {% endcomment %}
+{% for category, templates in categories.items %}
+<div class="mb-5">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <h5 class="fw-bold"><i data-lucide="layers" class="me-2"></i> {{ category }}</h5>
+    <div>
+      <button class="btn btn-sm btn-light scroll-left" data-target="#{{ category|slugify }}Row">‹</button>
+      <button class="btn btn-sm btn-light scroll-right" data-target="#{{ category|slugify }}Row">›</button>
+    </div>
+  </div>
+  <div class="d-flex overflow-auto gap-3 pb-2" id="{{ category|slugify }}Row">
+    {% for template in templates %}
+    <div class="card project-card p-3 shadow-sm d-flex flex-column" style="min-width: 250px; max-width: 250px; height: 250px;">
+      <div class="mb-2 flex-grow-1">
+        <h6 class="fw-bold">{{ template.name }}</h6>
+        <p class="small text-muted">
+          {{ template.description|truncatewords:20 }}
+        </p>
+      </div>
+      <div class="d-flex gap-2 mt-auto">
+        <button class="btn btn-sm btn-outline-primary generate-btn" data-template-id="{{ template.id }}">Add</button>
+        <button class="btn btn-sm btn-outline-secondary preview-btn"
+                data-title="{{ template.name }}"
+                data-description="{{ template.description }}"
+                data-created="Ready in seconds"
+                data-tech="{{ template.technologies }}"
+                data-steps="{{ template.steps|escape }}"
+                data-template-id="{{ template.id }}">
+          Preview
+        </button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+
+
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold fs-4" id="previewModalLabel">Project Preview</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <h3 id="modalTitle" class="fw-bold mb-3" style="font-size:1.6rem;"></h3>
+        <p class="text-muted small mb-3"><i data-lucide="calendar"></i> <span id="modalCreated"></span></p>
+
+        <div class="mb-3">
+          <h5 class="fw-bold"><i data-lucide="file-text" class="me-1"></i> Description</h5>
+          <p id="modalDescription" class="fw-semibold" style="font-size:1rem;"></p>
+        </div>
+
+        <div class="mb-3">
+          <h5 class="fw-bold"><i data-lucide="cpu" class="me-1"></i> Technologies</h5>
+          <p class="fw-semibold text-dark mb-0" id="modalTech" style="font-size:1rem;"></p>
+        </div>
+
+        <div class="mb-3">
+          <h5 class="fw-bold"><i data-lucide="list-check" class="me-1"></i> Installation Steps</h5>
+          <div id="modalSteps" class="fw-semibold text-dark"
+               style="max-height: 400px; overflow-y: auto; white-space: pre-line; font-size:1rem; line-height:1.5;"></div>
+        </div>
+
+        <div class="alert alert-info small fw-semibold">
+          <i data-lucide="info" class="me-2"></i> This template includes all installation steps and starter code.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <!-- Removed hardcoded template.id -->
+        <button class="btn btn-primary generate-btn-modal">Add Project</button>
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Scroll buttons
+  document.querySelectorAll(".scroll-left, .scroll-right").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const target = document.querySelector(btn.dataset.target);
+      if (!target) return;
+      target.scrollBy({ left: btn.classList.contains("scroll-left") ? -300 : 300, behavior: "smooth" });
+    });
+  });
+
+  // Preview modal
+  const previewButtons = document.querySelectorAll(".preview-btn");
+  const modalTitle = document.getElementById("modalTitle");
+  const modalDescription = document.getElementById("modalDescription");
+  const modalCreated = document.getElementById("modalCreated");
+  const modalTech = document.getElementById("modalTech");
+  const modalSteps = document.getElementById("modalSteps");
+  const generateBtnModal = document.querySelector(".generate-btn-modal");
+
+  previewButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      modalTitle.textContent = btn.dataset.title;
+      modalDescription.textContent = btn.dataset.description;
+      modalCreated.textContent = btn.dataset.created;
+      modalTech.textContent = btn.dataset.tech;
+      modalSteps.textContent = (btn.dataset.steps || "").replace(/\n{3,}/g, "\n\n").trim();
+
+      // Dynamically set template ID for modal button
+      generateBtnModal.dataset.templateId = btn.dataset.templateId;
+
+      const previewModal = new bootstrap.Modal(document.getElementById("previewModal"));
+      previewModal.show();
+    });
+  });
+
+  // Toast Notification function
+  function showToast(message) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    // Limit maximum 2 toasts
+    if (container.children.length >= 2) {
+      container.removeChild(container.firstChild);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.textContent = message;
+
+    container.appendChild(toast);
+
+    // Slide-in animation
+    setTimeout(() => toast.classList.add('show'), 50);
+
+    // Auto-hide after 2 seconds
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => {
+        if (toast.parentNode) container.removeChild(toast);
+      }, 400); // match CSS transition
+    }, 2000);
+  }
+
+  // Generate Project function
+  function generateProject(templateId) {
+    if (!templateId || templateId === "undefined") {
+      showToast("Template ID missing!");
+      return;
+    }
+
+    fetch("{% url 'generate_project' %}", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "X-CSRFToken": "{{ csrf_token }}"
+      },
+      body: new URLSearchParams({ template_id: templateId })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        showToast(`Project "${data.project_name}" has been added to your dashboard!`);
+      } else {
+        showToast("Error: " + data.error);
+      }
+    })
+    .catch(err => console.error(err));
+  }
+
+  // Attach modal generate button
+  generateBtnModal.addEventListener("click", () => {
+    generateProject(generateBtnModal.dataset.templateId);
+  });
+
+  // Attach all direct generate buttons
+  document.querySelectorAll(".generate-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      generateProject(btn.dataset.templateId);
+    });
+  });
+</script>
+
+{% endblock %}

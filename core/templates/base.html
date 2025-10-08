@@ -1,0 +1,408 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Blueprint{% endblock %}</title>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <style>
+/* Preview Modal Styling */
+#previewModal .modal-content, #deleteConfirmModal .modal-content { border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.15); padding:0; border:none; overflow:hidden; font-family:'Inter',sans-serif;}
+#previewModal .modal-header, #deleteConfirmModal .modal-header { background-color:#f8f9fa; border-bottom:none; padding:1.25rem 1.5rem;}
+#previewModal .modal-title, #deleteConfirmModal .modal-title { font-weight:700; font-size:1.5rem; color:#212529;}
+#previewModal .btn-close, #deleteConfirmModal .btn-close { background:transparent; border:none; font-size:1.2rem;}
+#previewModal .modal-body, #deleteConfirmModal .modal-body { padding:1.5rem; background-color:#fff; color:#495057;}
+#previewModal h3#modalTitle { color:#0d6efd;}
+#previewModal p, #deleteConfirmModal p { line-height:1.6; font-size:0.95rem;}
+#previewModal h5 { font-size:1.05rem; font-weight:600; margin-bottom:0.5rem; color:#212529;}
+#previewModal .modal-footer, #deleteConfirmModal .modal-footer { padding:1rem 1.5rem; background-color:#f8f9fa; border-top:none; display:flex; justify-content:flex-end; gap:0.5rem;}
+#modalSteps { border-left:3px solid #0d6efd; padding-left:0.75rem; max-height:300px; overflow-y:auto; background-color:#f9f9f9; border-radius:6px;}
+#modalSteps::-webkit-scrollbar { width:6px;}
+#modalSteps::-webkit-scrollbar-thumb { background-color:rgba(13,110,253,0.4); border-radius:3px;}
+#modalSteps::-webkit-scrollbar-track { background:transparent;}
+.toast-notification { min-width:280px; max-width:350px; background-color:#0d6efd; color:#fff; padding:0.75rem 1.25rem; border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,0.15); font-weight:500; opacity:0; transform:translateY(-20px); transition:all 0.4s ease-in-out;}
+.toast-notification.show { opacity:1; transform:translateY(0);}
+</style>
+
+<!-- Toast Container -->
+<div id="toastContainer" style="position: fixed; top: 20px; right: 20px; z-index: 9999;"></div>
+
+  <!-- Sidebar -->
+  <div id="sidebar" class="sidebar expanded">
+    <div class="sidebar-header d-flex align-items-center mb-4 px-2">
+      <img src="{% static 'images/icon.png' %}" alt="Blueprint" class="sidebar-logo-icon">
+      <span class="sidebar-logo ms-2">Blueprint</span>
+      <i id="toggleSidebar" class="fa fa-chevron-left ms-auto toggle-icon"></i>
+    </div>        
+    <a href="{% url 'dashboard' %}" class="sidebar-item active">
+      <i style="padding-right: 5px;" data-lucide="home"></i>
+      <span class="sidebar-text"> Dashboard</span>
+    </a>
+    <a href="{% url 'generate' %}" class="sidebar-item">
+      <i style="padding-right: 5px;" data-lucide="zap"></i>
+      <span class="sidebar-text"> Projects</span>
+    </a>
+    <a href="{% url 'history' %}" class="sidebar-item">
+      <i style="padding-right: 5px;" data-lucide="clock"></i>
+      <span class="sidebar-text">History</span>
+    </a>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main">
+    <!-- Top Navbar -->
+    <nav class="navbar top-navbar px-3 d-flex align-items-center">
+      <!-- Search (left) -->
+      <div class="search-wrapper position-relative">
+        <input type="text" id="searchInput" class="form-control search-bar">
+        <div class="typing-animation">Generate | Create | Launch</div>
+        <!-- Live search dropdown -->
+        <div id="searchDropdown" class="search-dropdown"></div>
+      </div>
+    
+      <!-- Right Controls -->
+      <div class="d-flex align-items-center ms-auto">
+        <!-- Settings -->
+        <button class="btn settings-btn me-2">
+          <i class="fa fa-cog"></i>
+        </button>
+    
+        <!-- Window Controls -->
+        <div class="window-controls d-flex align-items-center">
+          <button class="btn window-btn btn-minimize"><i class="fa fa-minus"></i></button>
+          <button class="btn window-btn btn-close"><i class="fa fa-times"></i></button>
+        </div>        
+      </div>
+    </nav>    
+
+    <!-- Content -->
+    <div class="content p-4">
+      {% block content %}{% endblock %}
+    </div>
+
+<!-- Footer / Status Bar -->
+<div class="footer d-flex justify-content-between px-3 py-1 small fw-bold">
+  <span>
+    <img src="{% static 'images/icon.png' %}" alt="version" class="footer-icon"> v1.0.0
+  </span>
+  <div class="tip-container">
+    <span style="color: black;" id="tipMessage">Loading tip...</span>
+  </div>
+</div>
+
+
+  <!-- Settings Overlay -->
+<div id="settingsOverlay" class="settings-overlay">
+  <div class="settings-panel p-4 d-flex flex-column h-100">
+    <h5 class="mb-3">Settings</h5>
+
+    <!-- Always on Top -->
+    <div class="settings-section mb-3">
+      <h6>General</h6>
+      <label>
+        <input type="checkbox" id="alwaysOnTop"> Always on Top
+      </label>
+    </div>
+
+    <!-- Shortcut Keys -->
+    <div class="settings-section mb-3">
+      <h6>Shortcut Keys</h6>
+      <ul class="list-unstyled small">
+        <li><kbd>Ctrl</kbd> + <kbd>M</kbd> → Open App</li>
+        <li><kbd>Ctrl</kbd> + <kbd>N</kbd> → Focus on Search Bar</li>
+      </ul>
+    </div>
+
+    <!-- About -->
+    <div class="settings-section mb-3">
+      <h6>About this App</h6>
+      <p class="mb-1">Blueprint v1.0.0</p>
+      <p class="mb-0">Developer: <strong>Bala</strong></p>
+    </div>
+
+    <!-- Social Links -->
+    <div class="settings-section mb-4">
+      <h6>Connect</h6>
+      <a href="https://github.com/yourusername" target="blank" rel="noopener noreferrer" class="me-3">
+        <i class="fab fa-github fa-lg"></i>
+      </a>
+      <a href="https://linkedin.com/in/yourusername" style="text-transform: none;" target="blank" rel="noopener noreferrer" class="me-3">
+        <i class="fab fa-linkedin fa-lg text-primary"></i>
+      </a>
+      <a href="https://instagram.com/yourusername" style="text-decoration: none;" target="blank" rel="noopener noreferrer">
+        <i class="fab fa-instagram fa-lg text-danger"></i>
+      </a>
+    </div>
+
+    <!-- Close Button at Bottom -->
+    <div class="mt-auto text-center pt-3 border-top">
+      <button style="padding-left: 40%;padding-right: 40%;" id="closeSettings" class="btn btn-sm btn-secondary">Close</button>
+    </div>
+  </div>
+</div>
+
+
+  <!-- Scripts -->
+  <script src="{% static 'js/main.js' %}"></script>
+  <script>lucide.createIcons();</script>
+
+  <!-- Bootstrap JS + Popper -->
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"></script>
+
+  <script>
+    const tips = [
+      "💡 You can preview before adding a project",
+      "⚡ Try Ctrl+N to focus on the search bar",
+      "📝 Organize projects by category",
+      "🔍 Use search to find snippets quickly",
+    ];
+
+    let currentTip = 0;
+    const tipMessage = document.getElementById("tipMessage");
+
+    function cycleTips() {
+      // Animate out to left
+      tipMessage.classList.remove("show");
+      tipMessage.classList.add("hide");
+
+      // After it slides out, change text
+      setTimeout(() => {
+        tipMessage.textContent = tips[currentTip];
+        currentTip = (currentTip + 1) % tips.length;
+
+        // Reset position on right side before showing
+        tipMessage.classList.remove("hide");
+        void tipMessage.offsetWidth; // reflow hack
+        tipMessage.classList.add("show");
+      }, 600);
+    }
+
+    // Init first tip
+    tipMessage.textContent = tips[0];
+    tipMessage.classList.add("show");
+
+    // Change every 5 seconds
+    setInterval(cycleTips, 5000);
+  </script>
+  
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const searchInput = document.querySelector("#searchInput");
+      const typingAnim = document.querySelector(".typing-animation");
+      const wrapper = document.querySelector(".search-wrapper");
+    
+      // Create dropdown element
+      const dropdown = document.createElement("div");
+      dropdown.classList.add("search-dropdown");
+      wrapper.appendChild(dropdown);
+    
+      let timer;
+    
+      searchInput.addEventListener("input", function() {
+        const query = this.value.trim();
+    
+        // Hide typing animation while typing
+        if(query) {
+          typingAnim.style.display = "none";
+        } else {
+          typingAnim.style.display = "block";
+          dropdown.style.display = "none";
+          dropdown.innerHTML = "";
+          return;
+        }
+    
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          fetch(`/search/?q=${encodeURIComponent(query)}`)
+            .then(res => res.json())
+            .then(data => {
+              const results = data.results;
+              dropdown.innerHTML = "";
+    
+              if (results.length === 0) {
+                dropdown.innerHTML = `<div class="no-results">No matches found</div>`;
+              } else {
+                results.forEach(item => {
+                  const highlightedName = item.name.replace(
+                    new RegExp(query, "gi"),
+                    match => `<mark>${match}</mark>`
+                  );
+    
+                  const div = document.createElement("div");
+                  div.classList.add("search-item");
+                  div.innerHTML = `
+                    <div class="result-info">
+                      <strong class="result-name">${highlightedName}</strong>
+                      <small class="result-category text-muted">${item.category}</small>
+                      <div class="result-desc small text-muted">${item.description}</div>
+                    </div>
+                    <div class="result-actions mt-1">
+                      <button class="btn btn-sm btn-success btn-add">Add</button>
+                    </div>
+                  `;
+    
+                  // Add button click
+                  div.querySelector(".btn-add").addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    fetch("/generate-project/", {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/x-www-form-urlencoded",
+                        "X-CSRFToken": getCookie("csrftoken")
+                      },
+                      body: `template_id=${item.id}`
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                      if(data.success){
+                        showToast(`✅ Project "${data.project_name}" added!`);
+                      } else {
+                        showToast(`⚠️ ${data.error}`);
+                      }
+                    });
+                  });
+    
+                  dropdown.appendChild(div);
+                });
+              }
+    
+              dropdown.style.display = "block";
+            });
+        }, 300); // debounce
+      });
+    
+      // Hide dropdown when clicking outside
+      document.addEventListener("click", (e) => {
+        if (!wrapper.contains(e.target)) {
+          dropdown.style.display = "none";
+        }
+      });
+    
+      // Helper to get CSRF token
+      function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+          const cookies = document.cookie.split(';');
+          for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.startsWith(name + '=')) {
+              cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+              break;
+            }
+          }
+        }
+        return cookieValue;
+      }
+    
+      // Toast function
+      function showToast(message) {
+        const container = document.getElementById("toastContainer");
+        const toast = document.createElement("div");
+        toast.classList.add("toast-notification");
+        toast.textContent = message;
+        container.appendChild(toast);
+    
+        // Trigger animation
+        setTimeout(() => toast.classList.add("show"), 50);
+    
+        // Hide after 3s and remove from DOM
+        setTimeout(() => {
+          toast.classList.remove("show");
+          setTimeout(() => toast.remove(), 400);
+        }, 3000);
+      }
+    });
+    </script>
+    
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const root = document.documentElement;
+        const sidebar = document.getElementById("sidebar");
+        const toggleBtn = document.getElementById("toggleSidebar");
+        const icon = toggleBtn?.querySelector("i");
+      
+        // --- 1️⃣ Load sidebar state immediately ---
+        const savedState = localStorage.getItem("sidebarState");
+        if (savedState === "collapsed") {
+          root.classList.add("sidebar-collapsed");
+        } else {
+          root.classList.remove("sidebar-collapsed");
+        }
+      
+        // --- 2️⃣ Apply icon direction correctly on load ---
+        const isCollapsed = root.classList.contains("sidebar-collapsed");
+        if (icon) {
+          icon.classList.toggle("fa-chevron-right", isCollapsed);
+          icon.classList.toggle("fa-chevron-left", !isCollapsed);
+        }
+      
+        // --- 3️⃣ Handle toggle button click ---
+        toggleBtn?.addEventListener("click", () => {
+          const nowCollapsed = root.classList.toggle("sidebar-collapsed");
+      
+          // Save new state
+          localStorage.setItem("sidebarState", nowCollapsed ? "collapsed" : "expanded");
+      
+          // Update icon
+          if (icon) {
+            icon.classList.toggle("fa-chevron-right", nowCollapsed);
+            icon.classList.toggle("fa-chevron-left", !nowCollapsed);
+          }
+        });
+      
+        // --- 4️⃣ Prevent sidebar from auto-resetting on page navigation ---
+        window.addEventListener("pageshow", () => {
+          const saved = localStorage.getItem("sidebarState");
+          if (saved === "collapsed") root.classList.add("sidebar-collapsed");
+          else root.classList.remove("sidebar-collapsed");
+        });
+      });
+      </script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    // Minimize button
+    document.querySelector(".btn-minimize")?.addEventListener("click", () => {
+      console.log("Minimize clicked"); // for debugging
+      window.electronAPI.minimize();
+    });
+  
+    // Close button
+    document.querySelector(".btn-close")?.addEventListener("click", () => {
+      console.log("Close clicked"); // for debugging
+      window.electronAPI.close();
+    });
+  
+    // Always on Top checkbox
+    const alwaysOnTopCheckbox = document.getElementById('alwaysOnTop');
+    if (alwaysOnTopCheckbox) {
+      alwaysOnTopCheckbox.addEventListener('change', (e) => {
+        const isChecked = e.target.checked;
+        console.log('Always on Top set to:', isChecked); // debugging
+        window.electronAPI.setAlwaysOnTop(isChecked);
+      });
+    }
+  });
+  </script>
+  
+      
+    
+</body>
+</html>
