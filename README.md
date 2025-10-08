@@ -109,7 +109,7 @@ Once Django is running:
 **Bala Murugan**
 💼 Developer of **Blueprint**
 🌐 [GitHub](https://github.com/<Balamurugan-cholas>)
-📧 Contact: [[your-email@example.com](mailto:balamuruganofficial3@gmail.com)]
+📧 Contact: [[balamuruganofficial3@gmail.com](mailto:balamuruganofficial3@gmail.com)]
 
 
 ## 📜 License
