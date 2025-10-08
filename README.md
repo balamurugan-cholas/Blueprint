@@ -5,7 +5,7 @@
 
 ## 🚀 Overview
 
-**Blueprint** is a cross-platform desktop application built with **Electron** and **Django**, designed to streamline project management, documentation, and automation.
+**Blueprint** is a desktop application built with **Electron** and **Django**, designed to streamline project management, documentation, and automation.
 It combines the flexibility of a web-based dashboard with the performance and integration of a native desktop app.
 
 
@@ -51,7 +51,7 @@ It combines the flexibility of a web-based dashboard with the performance and in
 ### 1️⃣ Clone the Repository
 
 ```bash
-git clone https://github.com/<your-username>/Blueprint.git
+git clone https://github.com/balamurugan-cholas/Blueprint.git
 cd Blueprint
 ```
 
